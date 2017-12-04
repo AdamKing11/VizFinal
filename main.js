@@ -1,5 +1,5 @@
 
-var re = /^th/
+var re = /^th(e$|ank)/
 var data1 = [];
 for (var i = 0; i < data.length; i++) {
 	if (re.exec(data[i].word)) {
@@ -11,10 +11,7 @@ data = data1;
 data1 = [];
 console.log(data.length)
 
-//var width = window.innerWidth;
-//var height = window.innerHeight;
-
-
+function mod_year(y, m) { return (parseInt(y) + m).toString();	}
 
 var cur_year = '1990'
 
@@ -113,7 +110,6 @@ var point_brush = d3.brush()
 				return should_highlight;
 				}) 
 			.attr('fill-opacity', 1);
-			//.attr('class', 'point-unbrushed')
 		console.log(brushed_words);
 		
 	})
@@ -125,25 +121,20 @@ c_svg.append('g')
 
 var tl_brush_ext = [cur_year, parseInt(cur_year) + 10]
 var tl_brush = d3.brushX()
-	//.extent([[1800,0], [tl_scale(2000),tl_height]])
 	.filter(function () {return d3.mouse(this)[0] > tl_scale(tl_brush_ext[0]) && d3.mouse(this)[0] < tl_scale(tl_brush_ext[1])})
-	//.on('start', function(d) {
-	//	var brush_loc = tl_scale.invert(d3.event.selection[0]);
-		//tl_brush.call(tl_brush.move, [brush_loc-5, brush_loc+5].map(tl_scale))
-	//	console.log(brush_loc)
-
-	//})
 	.on('brush end', function(d) {
 		var tb_loc = d3.event.selection;
 		tl_brush_ext = tb_loc.map(tl_scale.invert);
 		var new_year = (tl_brush_ext[0] + tl_brush_ext[1])/2;
 		new_year = Math.round(new_year/10) * 10;
 		if (new_year >= 1800 & new_year <= 2000) {
+			var time_passed = cur_year - new_year;
 			cur_year = new_year;
+			
 			x_scale.domain(d3.extent(data, function(d) { 
 				return d.decs[cur_year].u.rank;
 			}))
-			.domain(d3.extent(data, function(d) { 
+			y_scale.domain(d3.extent(data, function(d) { 
 				return d.decs[cur_year].t.rank;
 			}))
 
@@ -152,6 +143,73 @@ var tl_brush = d3.brushX()
 				.duration(500)
 				.attr('cx', function(d) { return x_scale(d.decs[cur_year].u.rank) })
 				.attr('cy', function(d) { return y_scale(d.decs[cur_year].t.rank) });
+
+			//c_svg.selectAll(".point-hist-line")
+			//	.remove();
+			
+			var hist_data = [];
+			for (var i = 0; i < 1; i++) {
+				var x_hist_scale = x_scale;
+				var y_hist_scale = y_scale;
+				for (var j = 0; j < data.length; j++) {
+					var new_datum = {};
+					var year1 = mod_year(cur_year, -10 * (i+1));
+					var year2 = mod_year(cur_year, -10 * i);
+
+					new_datum['x1'] = x_hist_scale(data[j].decs[year1].u.rank);
+					new_datum['y1'] = y_hist_scale(data[j].decs[year1].t.rank);
+					
+					x_hist_scale.domain(d3.extent(data, function(d) { 
+						return d.decs[year1].u.rank;
+					}));
+					y_hist_scale.domain(d3.extent(data, function(d) { 
+						return d.decs[year1].t.rank;
+					}))
+					
+					console.log(year1, year2)
+					new_datum['x2'] = x_hist_scale(data[j].decs[year2].u.rank);
+					new_datum['y2'] = y_hist_scale(data[j].decs[year2].t.rank);
+					new_datum['opacity'] = 1 - (i)/3;
+					hist_data.push(new_datum);
+				}
+			};
+			
+			c.selectAll("svg").selectAll("line")
+				//.exit()
+				.data(hist_data)
+				.enter()
+				.append("line")
+			//	.attr("class", "point-hist-line")
+				.attr('x1', function(d) { return d.x1; } )
+				.attr('x2', function(d) { return d.x2; })
+				.attr('y1', function(d) { return d.y1; })
+				.attr('y2', function(d) { return d.y2; })
+		//		.attr('stroke-opacity', .5);				
+			
+			
+			//for (var i = 0; i < 3; i++) {
+			//	console.log(i)
+			//	c_svg.selectAll("line")
+			//		.data(hist_data)
+			//		.enter()
+			//		.append("line")
+					//.attr("class", "point-hist-line")
+			//		.attr("x1", function(d) { return d.x1 })
+			//		.attr("y1", function(d) { return d.y1 })
+			//		.attr("x2", function(d) { return d.x2 })
+			//		.attr("y2", function(d) { return d.y2 })
+			//		.attr("stroke", "red");
+					//.attr('fill', 'red')
+					//.attr('x2', function(d) { return x_scale(d.decs[mod_year(cur_year, -10 * i)].u.rank) })
+					//.attr('y2', function(d) { return y_scale(d.decs[mod_year(cur_year, -10 * i)].t.rank) })
+					//.attr('stroke-opacity', 0);
+			//}
+			
+			//c_svg.selectAll(".point-hist-line")
+			//	.transition()
+			//	.duration(500)
+			//	.delay(500)
+			//	.attr('stroke-opacity', .8)		
 		}
 	})
 
@@ -165,7 +223,7 @@ tl_svg.selectAll('.tl-brush>.handle').remove();
 //tl_svg.selectAll('rect')
 //	.attr('fill', 'white')
 //	.attr('stroke', 'black')
-
+console.log(cur_year);
 ///////////////////////////////////////////////////////////////
 c_svg.selectAll("circle")
 	.data(data)
