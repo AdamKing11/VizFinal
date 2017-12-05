@@ -1,5 +1,5 @@
 
-var re = /^th(e$|ank)/
+var re = /^th(e$|anksg)/
 var data1 = [];
 for (var i = 0; i < data.length; i++) {
 	if (re.exec(data[i].word)) {
@@ -13,7 +13,7 @@ console.log(data.length)
 
 function mod_year(y, m) { return (parseInt(y) + m).toString();	}
 
-var cur_year = '1990'
+var cur_year = '1950'
 
 var width = 700;
 var height = 600;
@@ -111,7 +111,7 @@ var point_brush = d3.brush()
 				}) 
 			.attr('fill-opacity', 1);
 		console.log(brushed_words);
-		
+
 	})
   
 c_svg.append('g')
@@ -119,7 +119,9 @@ c_svg.append('g')
 	.call(point_brush);
 
 
-var tl_brush_ext = [cur_year, parseInt(cur_year) + 10]
+var tl_brush_ext = [cur_year, parseInt(cur_year) + 10];
+
+
 var tl_brush = d3.brushX()
 	.filter(function () {return d3.mouse(this)[0] > tl_scale(tl_brush_ext[0]) && d3.mouse(this)[0] < tl_scale(tl_brush_ext[1])})
 	.on('brush end', function(d) {
@@ -129,14 +131,10 @@ var tl_brush = d3.brushX()
 		new_year = Math.round(new_year/10) * 10;
 		if (new_year >= 1800 & new_year <= 2000) {
 			var time_passed = cur_year - new_year;
-			cur_year = new_year;
+			cur_year = new_year.toString();
 			
-			x_scale.domain(d3.extent(data, function(d) { 
-				return d.decs[cur_year].u.rank;
-			}))
-			y_scale.domain(d3.extent(data, function(d) { 
-				return d.decs[cur_year].t.rank;
-			}))
+			x_scale.domain(d3.extent(data, function(d) { return d.decs[cur_year].u.rank;	}))
+			y_scale.domain(d3.extent(data, function(d) { return d.decs[cur_year].t.rank;	}))
 
 			c_svg.selectAll("circle")
 				.transition()
@@ -144,9 +142,101 @@ var tl_brush = d3.brushX()
 				.attr('cx', function(d) { return x_scale(d.decs[cur_year].u.rank) })
 				.attr('cy', function(d) { return y_scale(d.decs[cur_year].t.rank) });
 
-			//c_svg.selectAll(".point-hist-line")
+		////////////////////////////////////////
+			c_svg.selectAll(".word-group")
+				.selectAll("path")
+				.attr("stroke", "black")
+				.attr("stroke-dasharray", "5,5")
+				.attr("fill", "none")
+				.attr("d", function(d) {
+					var x_hist_scale = x_scale;
+					var y_hist_scale = y_scale;
+					console.log(cur_year)
+					p = 'M' + x_hist_scale(d.decs[cur_year].u.rank) + ' ' + y_hist_scale(d.decs[cur_year].t.rank); 
+					for (var i = 1; i < 3; i ++) {
+						var new_hist_year = mod_year(cur_year, -10 * i)
+						x_hist_scale.domain(d3.extent(data, function(d) { return d.decs[new_hist_year].u.rank; }))
+						y_hist_scale.domain(d3.extent(data, function(d) { return d.decs[new_hist_year].t.rank; }))
+						
+						p += ' L' + x_hist_scale(d.decs[new_hist_year].u.rank) + ' ' + y_hist_scale(d.decs[new_hist_year].t.rank);
+					}
+					return p;
+				})
+				.attr("stroke-opacity", 0)
+				.transition()
+				.delay(500)
+				.duration(500)
+				.attr("stroke-opacity", 1);
+			
+		////////////////////////////////////////
+		}
+	})
+
+var tl_bg = tl_svg.append('g')
+	.call(tl_brush)
+	.attr('class', 'tl-brush')
+	.call(tl_brush.move, [cur_year, parseInt(cur_year) + 10].map(tl_scale));
+
+tl_svg.selectAll('.tl-brush>.handle').remove();
+
+//tl_svg.selectAll('rect')
+//	.attr('fill', 'white')
+//	.attr('stroke', 'black')
+console.log(cur_year);
+///////////////////////////////////////////////////////////////
+c_svg.selectAll("circle")
+	.data(data)
+	.enter()
+	.append("g")
+	.attr('class', 'word-group')
+	.append("circle")
+	.attr('class', 'point-mouseoff')
+	.attr('cx', function(d) { return x_scale(d.decs[cur_year].u.rank) })
+	.attr('cy', function(d) { return y_scale(d.decs[cur_year].t.rank) })
+	.attr('fill', 'black')
+	.on('mouseover click', function(d) {
+		d3.select(this)
+			.attr('class', 'point-mouseon');
+			//.attr('fill','red');
+
+		ws_svg.selectAll('.word-stats-word')
+			.transition()
+			.duration(500)
+			.text(d.word);
+
+		ws_svg.selectAll('.word-stats-rank')
+			.transition()
+			.duration(500)
+			.text(d.decs[cur_year].u.rank + ', ' + d.decs[cur_year].t.rank);
+	})
+	.on('mouseout', function(d) { 
+		d3.select(this)
+			.attr('class', 'point-mouseoff');
+			//.attr('fill', 'black');
+
+		ws_svg.selectAll('.word-stats-word')
+			.transition()
+			.duration(500)
+			.text('----');
+
+		ws_svg.selectAll('.word-stats-rank')
+			.transition()
+			.duration(500)
+			.text('--')
+	})
+	
+c_svg.selectAll(".word-group").
+	append("path")
+	//.attr("class", "point-hist-line");
+
+	
+
+
+//c_svg.selectAll(".point-hist-line")
 			//	.remove();
 			
+
+			/*
 			var hist_data = [];
 			for (var i = 0; i < 1; i++) {
 				var x_hist_scale = x_scale;
@@ -186,7 +276,7 @@ var tl_brush = d3.brushX()
 				.attr('y2', function(d) { return d.y2; })
 		//		.attr('stroke-opacity', .5);				
 			
-			
+			*/
 			//for (var i = 0; i < 3; i++) {
 			//	console.log(i)
 			//	c_svg.selectAll("line")
@@ -210,58 +300,3 @@ var tl_brush = d3.brushX()
 			//	.duration(500)
 			//	.delay(500)
 			//	.attr('stroke-opacity', .8)		
-		}
-	})
-
-var tl_bg = tl_svg.append('g')
-	.call(tl_brush)
-	.attr('class', 'tl-brush')
-	.call(tl_brush.move, [cur_year, parseInt(cur_year) + 10].map(tl_scale));
-
-tl_svg.selectAll('.tl-brush>.handle').remove();
-
-//tl_svg.selectAll('rect')
-//	.attr('fill', 'white')
-//	.attr('stroke', 'black')
-console.log(cur_year);
-///////////////////////////////////////////////////////////////
-c_svg.selectAll("circle")
-	.data(data)
-	.enter()
-	.append("circle")
-	.attr('class', 'point-mouseoff')
-	.attr('cx', function(d) { return x_scale(d.decs[cur_year].u.rank) })
-	.attr('cy', function(d) { return y_scale(d.decs[cur_year].t.rank) })
-	.attr('fill', 'black')
-	.on('mouseover click', function(d) {
-		d3.select(this)
-			.attr('class', 'point-mouseon');
-			//.attr('fill','red');
-
-		ws_svg.selectAll('.word-stats-word')
-			.transition()
-			.duration(500)
-			.text(d.word);
-
-		ws_svg.selectAll('.word-stats-rank')
-			.transition()
-			.duration(500)
-			.text(d.decs[cur_year].u.rank + ', ' + d.decs[cur_year].t.rank);
-	})
-	.on('mouseout', function(d) { 
-		d3.select(this)
-			.attr('class', 'point-mouseoff');
-			//.attr('fill', 'black');
-
-		ws_svg.selectAll('.word-stats-word')
-			.transition()
-			.duration(500)
-			.text('----');
-
-		ws_svg.selectAll('.word-stats-rank')
-			.transition()
-			.duration(500)
-			.text('--')
-	});
-
-	
