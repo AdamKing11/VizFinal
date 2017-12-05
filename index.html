@@ -18,13 +18,11 @@
   }
 
   .point-mouseoff {
-    r: 3;
   }
 
   .point-mouseon {
     fill-opacity: 1;
     fill: blue;
-    r: 4;
   }
 
   .point-hist-line {
@@ -39,7 +37,9 @@
   </head>
   <body style="padding: 0; margin: 0">
     <div id="c"></div><br>
-    <div id="tl"></div>
+    <div id="tl"></div><br>
+    <div id="rank-button"><button id="rank-button-b" onclick="scale_by('rank')"> Ranks </button></div>
+    <div id="info-button"><button id="info-button-b" onclick="scale_by('info')"> Infos </button></div>    
     <script src="main.js"></script>
   </body>
 </html>
