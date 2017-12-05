@@ -1,14 +1,12 @@
 
 var re = /^th(e$|anksg)/
-var data1 = [];
-for (var i = 0; i < data.length; i++) {
-	if (re.exec(data[i].word)) {
-		data1.push(data[i])
+var data = [];
+for (var i = 0; i < data_full.length; i++) {
+	if (re.exec(data_full[i].word)) {
+		data.push(data_full[i])
 	}
 }
 
-data = data1;
-data1 = [];
 console.log(data.length)
 
 function mod_year(y, m) { return (parseInt(y) + m).toString();	}
@@ -25,6 +23,7 @@ var x_offset = 75;
 var y_offset = 75;
 
 var c = d3.select("#c");
+var tl = d3.select("#tl");
 
 var c_svg = c.append('svg')
     .attr("width", width)
@@ -34,7 +33,7 @@ var ws_svg = c.append('svg')
 	.attr("width", words_stats_w)
 	.attr("height", height);
 
-var tl_svg = c.append('svg')
+var tl_svg = tl.append('svg')
 	.attr("width", width)
 	.attr("height", tl_height);
 
@@ -85,45 +84,49 @@ ws_svg.append("g")
 	.text("--");
 
 
+function point_in_brush(px, py, brush_corners) {
+	var x_lower = brush_corners[0][0], x_upper = brush_corners[1][0];
+	var y_lower = brush_corners[0][1], y_upper = brush_corners[1][1];
+	return ((px >= x_lower && px <= x_upper) &&
+			(py >= y_lower && py <= y_upper));
+}
+
+var brush_corners;
+
 var point_brush = d3.brush()
 	.on('start', function(d) { 
 		c_svg.selectAll('circle')
-			//.attr('class', 'point-unbrushed')
 			.attr('fill-opacity', 1)
 			.attr('fill', 'black');
 
-		c_svg.selectAll('#point-hist-line')
+		c_svg.selectAll('path')
 			.attr("stroke", "url(#linear-gradient)");
 	})
 	.on('brush', function(d) {
 		// gives back the top left corner and bottom right
-		var brush_corners = d3.event.selection;
-		var x_lower = brush_corners[0][0], x_upper = brush_corners[1][0];
-		var y_lower = brush_corners[0][1], y_upper = brush_corners[1][1];
-
+		brush_corners = d3.event.selection;
+		
 		// make non-brushed points grayed out
 		c_svg.selectAll('circle')
 			.attr('fill-opacity', .3);
 
 		var brushed_words = [];
 		c_svg.selectAll('circle')
-			.filter(function(e) {
-				var u_rank = x_scale(e.decs[cur_year].u.rank), 
-					t_rank = y_scale(e.decs[cur_year].t.rank);
-				
-				var should_highlight = ((u_rank >= x_lower && u_rank <= x_upper) &&
-									(t_rank >= y_lower && t_rank <= y_upper));
+			.filter(function(e) { 
+				var u_rank = x_scale(e.decs[cur_year].u.rank), t_rank = y_scale(e.decs[cur_year].t.rank);
+				var should_highlight = point_in_brush(u_rank, t_rank, brush_corners);
 				if (should_highlight) { brushed_words.push(e.word); } 
 				return should_highlight;
-				})
+			})
 			.attr('fill-opacity', 1)
 			.attr('fill', 'red');
 		
-		c_svg.selectAll('#word-group')
-			.filter(function(e) {
-				console.log(d)
-				})
-			.attr("stroke", "url(#brushed-linear-gradient)");
+		//c_svg.selectAll('path')
+		//	.filter(function(e) {
+		//		var u_rank = x_scale(e.decs[cur_year].u.rank), t_rank = y_scale(e.decs[cur_year].t.rank);
+		//		return point_in_brush(u_rank, t_rank, brush_corners);
+		//	})
+		//	.attr("stroke", "url(#brushed-linear-gradient)");
 
 		console.log(brushed_words);
 
@@ -137,58 +140,78 @@ c_svg.append('g')
 var tl_brush_ext = [cur_year, parseInt(cur_year) + 10];
 
 
+function move_tl_brush(d, new_year) {
+	if (new_year === undefined) {
+		var tb_loc = d3.event.selection;
+		tl_brush_ext = tb_loc.map(tl_scale.invert);
+		new_year = (tl_brush_ext[0] + tl_brush_ext[1])/2;
+		new_year = Math.round(new_year/10) * 10;
+	}
+	if (new_year >= 1800 & new_year <= 2000) {
+		var time_passed = cur_year - new_year;
+		cur_year = new_year.toString();
+			
+		c_svg.selectAll("circle")
+			.transition()
+			.duration(500)
+			.attr('cx', function(d) { return x_scale(d.decs[cur_year].u.rank) })
+			.attr('cy', function(d) { return y_scale(d.decs[cur_year].t.rank) });
+
+		////////////////////////////////////////
+		c_svg.selectAll(".word-group")
+			.selectAll("path")
+			.attr("d", function(d) {
+				var x_hist_scale = x_scale;
+				var y_hist_scale = y_scale;
+				p = 'M' + x_hist_scale(d.decs[cur_year].u.rank) + ' ' + y_hist_scale(d.decs[cur_year].t.rank); 
+				for (var i = 1; i <= 5; i ++) {
+					var new_hist_year = mod_year(cur_year, -10 * i)
+				
+					p += ' L' + x_hist_scale(d.decs[new_hist_year].u.rank) + ' ' + y_hist_scale(d.decs[new_hist_year].t.rank);
+				}
+				return p;
+			})
+			.attr("stroke-opacity", 0)
+			.attr("stroke", "url(#linear-gradient)")
+			.transition()
+			.delay(500)
+			.duration(500)
+			.attr("stroke-opacity", 1)
+			.filter(function(d) {
+				var u_rank = x_scale(d.decs[cur_year].u.rank), t_rank = y_scale(d.decs[cur_year].t.rank);
+				return point_in_brush(u_rank, t_rank, brush_corners);
+			})
+			.attr("stroke", "url(#brushed-linear-gradient)");
+		////////////////////////////////////////
+	}
+}
+
 var tl_brush = d3.brushX()
 	//.extent([[x_scale(1700),0], [x_scale(2100),tl_height]])
 	.filter(function () {return d3.mouse(this)[0] > tl_scale(tl_brush_ext[0]) && d3.mouse(this)[0] < tl_scale(tl_brush_ext[1])})
-	.on('brush end', function(d) {
-		var tb_loc = d3.event.selection;
-		tl_brush_ext = tb_loc.map(tl_scale.invert);
-		var new_year = (tl_brush_ext[0] + tl_brush_ext[1])/2;
-		new_year = Math.round(new_year/10) * 10;
-		if (new_year >= 1800 & new_year <= 2000) {
-			var time_passed = cur_year - new_year;
-			cur_year = new_year.toString();
-			
-			c_svg.selectAll("circle")
-				.transition()
-				.duration(500)
-				.attr('cx', function(d) { return x_scale(d.decs[cur_year].u.rank) })
-				.attr('cy', function(d) { return y_scale(d.decs[cur_year].t.rank) });
-
-		////////////////////////////////////////
-			c_svg.selectAll(".word-group")
-				.selectAll("path")
-				.attr("d", function(d) {
-					var x_hist_scale = x_scale;
-					var y_hist_scale = y_scale;
-					p = 'M' + x_hist_scale(d.decs[cur_year].u.rank) + ' ' + y_hist_scale(d.decs[cur_year].t.rank); 
-					for (var i = 1; i <= 4; i ++) {
-						var new_hist_year = mod_year(cur_year, -10 * i)
-					
-						p += ' L' + x_hist_scale(d.decs[new_hist_year].u.rank) + ' ' + y_hist_scale(d.decs[new_hist_year].t.rank);
-					}
-					return p;
-				})
-				.attr("stroke-opacity", 0)
-				.transition()
-				.delay(500)
-				.duration(500)
-				.attr("stroke-opacity", 1);
-			
-		////////////////////////////////////////
-		}
-	})
+	.on('brush end', function(d) { move_tl_brush(d) } );
 
 var tl_bg = tl_svg.append('g')
 	.call(tl_brush)
 	.attr('class', 'tl-brush')
-	.call(tl_brush.move, [cur_year, parseInt(cur_year) + 10].map(tl_scale));
+	.call(tl_brush.move, [cur_year-5, parseInt(cur_year) + 5].map(tl_scale));
 
 tl_svg.selectAll('.tl-brush>.handle').remove();
 
-//tl_svg.selectAll('rect')
-//	.attr('fill', 'white')
-//	.attr('stroke', 'black')
+
+function move_tl_slider(new_year, dur) {
+	if (dur === undefined) {
+		dur = 500;
+	}
+	tl_bg.transition()
+		.duration(dur)
+		.call(tl_brush.move, [new_year, new_year].map(tl_scale));
+}
+
+function whole_tl() {
+	move_tl_slider(1990, 3000);
+	//
+}
 
 var linearGradient = c_svg.append("defs")
 	.append("linearGradient")
@@ -238,8 +261,7 @@ c_svg.selectAll("circle")
 	.on('mouseover click', function(d) {
 		d3.select(this)
 			.attr('class', 'point-mouseon');
-			//.attr('fill','red');
-
+			
 		ws_svg.selectAll('.word-stats-word')
 			.transition()
 			.duration(500)
@@ -264,82 +286,10 @@ c_svg.selectAll("circle")
 			.transition()
 			.duration(500)
 			.text('--')
-	})
+	});
 	
 c_svg.selectAll(".word-group")
 	.append("path")
 	.attr("stroke", "url(#linear-gradient)")
 	.attr("stroke-dasharray", "5,5")
-	.attr("fill", "none")
-				
-	
-
-
-//c_svg.selectAll(".point-hist-line")
-			//	.remove();
-			
-
-			/*
-			var hist_data = [];
-			for (var i = 0; i < 1; i++) {
-				var x_hist_scale = x_scale;
-				var y_hist_scale = y_scale;
-				for (var j = 0; j < data.length; j++) {
-					var new_datum = {};
-					var year1 = mod_year(cur_year, -10 * (i+1));
-					var year2 = mod_year(cur_year, -10 * i);
-
-					new_datum['x1'] = x_hist_scale(data[j].decs[year1].u.rank);
-					new_datum['y1'] = y_hist_scale(data[j].decs[year1].t.rank);
-					
-					x_hist_scale.domain(d3.extent(data, function(d) { 
-						return d.decs[year1].u.rank;
-					}));
-					y_hist_scale.domain(d3.extent(data, function(d) { 
-						return d.decs[year1].t.rank;
-					}))
-					
-					console.log(year1, year2)
-					new_datum['x2'] = x_hist_scale(data[j].decs[year2].u.rank);
-					new_datum['y2'] = y_hist_scale(data[j].decs[year2].t.rank);
-					new_datum['opacity'] = 1 - (i)/3;
-					hist_data.push(new_datum);
-				}
-			};
-			
-			c.selectAll("svg").selectAll("line")
-				//.exit()
-				.data(hist_data)
-				.enter()
-				.append("line")
-			//	.attr("class", "point-hist-line")
-				.attr('x1', function(d) { return d.x1; } )
-				.attr('x2', function(d) { return d.x2; })
-				.attr('y1', function(d) { return d.y1; })
-				.attr('y2', function(d) { return d.y2; })
-		//		.attr('stroke-opacity', .5);				
-			
-			*/
-			//for (var i = 0; i < 3; i++) {
-			//	console.log(i)
-			//	c_svg.selectAll("line")
-			//		.data(hist_data)
-			//		.enter()
-			//		.append("line")
-					//.attr("class", "point-hist-line")
-			//		.attr("x1", function(d) { return d.x1 })
-			//		.attr("y1", function(d) { return d.y1 })
-			//		.attr("x2", function(d) { return d.x2 })
-			//		.attr("y2", function(d) { return d.y2 })
-			//		.attr("stroke", "red");
-					//.attr('fill', 'red')
-					//.attr('x2', function(d) { return x_scale(d.decs[mod_year(cur_year, -10 * i)].u.rank) })
-					//.attr('y2', function(d) { return y_scale(d.decs[mod_year(cur_year, -10 * i)].t.rank) })
-					//.attr('stroke-opacity', 0);
-			//}
-			
-			//c_svg.selectAll(".point-hist-line")
-			//	.transition()
-			//	.duration(500)
-			//	.delay(500)
-			//	.attr('stroke-opacity', .8)		
+	.attr("fill", "none");
