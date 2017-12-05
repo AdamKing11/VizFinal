@@ -39,15 +39,17 @@ var tl_svg = c.append('svg')
 	.attr("height", tl_height);
 
 var x_scale = d3.scaleLinear()
-	.domain(d3.extent(data, function(d) { 
-		return d.decs[cur_year].u.rank;
-	}))
+	//.domain(d3.extent(data, function(d) { 
+	//	return d.decs[cur_year].u.rank;
+	//}))
+	.domain([1,17000])
 	.range([x_offset, width - x_offset ]);
 
 var y_scale = d3.scaleLinear()
-	.domain(d3.extent(data, function(d) { 
-		return d.decs[cur_year].t.rank;
-	}))
+	//.domain(d3.extent(data, function(d) { 
+	//	return d.decs[cur_year].t.rank;
+	//}))
+	.domain([1,17000])
 	.range([height - y_offset, y_offset]);
 
 var tl_scale = d3.scaleLinear()
@@ -87,7 +89,11 @@ var point_brush = d3.brush()
 	.on('start', function(d) { 
 		c_svg.selectAll('circle')
 			//.attr('class', 'point-unbrushed')
-			.attr('fill-opacity', 1) 
+			.attr('fill-opacity', 1)
+			.attr('fill', 'black');
+
+		c_svg.selectAll('#point-hist-line')
+			.attr("stroke", "url(#linear-gradient)");
 	})
 	.on('brush', function(d) {
 		// gives back the top left corner and bottom right
@@ -98,6 +104,7 @@ var point_brush = d3.brush()
 		// make non-brushed points grayed out
 		c_svg.selectAll('circle')
 			.attr('fill-opacity', .3);
+
 		var brushed_words = [];
 		c_svg.selectAll('circle')
 			.filter(function(e) {
@@ -108,8 +115,16 @@ var point_brush = d3.brush()
 									(t_rank >= y_lower && t_rank <= y_upper));
 				if (should_highlight) { brushed_words.push(e.word); } 
 				return should_highlight;
-				}) 
-			.attr('fill-opacity', 1);
+				})
+			.attr('fill-opacity', 1)
+			.attr('fill', 'red');
+		
+		c_svg.selectAll('#word-group')
+			.filter(function(e) {
+				console.log(d)
+				})
+			.attr("stroke", "url(#brushed-linear-gradient)");
+
 		console.log(brushed_words);
 
 	})
@@ -123,6 +138,7 @@ var tl_brush_ext = [cur_year, parseInt(cur_year) + 10];
 
 
 var tl_brush = d3.brushX()
+	//.extent([[x_scale(1700),0], [x_scale(2100),tl_height]])
 	.filter(function () {return d3.mouse(this)[0] > tl_scale(tl_brush_ext[0]) && d3.mouse(this)[0] < tl_scale(tl_brush_ext[1])})
 	.on('brush end', function(d) {
 		var tb_loc = d3.event.selection;
@@ -133,9 +149,6 @@ var tl_brush = d3.brushX()
 			var time_passed = cur_year - new_year;
 			cur_year = new_year.toString();
 			
-			x_scale.domain(d3.extent(data, function(d) { return d.decs[cur_year].u.rank;	}))
-			y_scale.domain(d3.extent(data, function(d) { return d.decs[cur_year].t.rank;	}))
-
 			c_svg.selectAll("circle")
 				.transition()
 				.duration(500)
@@ -145,19 +158,13 @@ var tl_brush = d3.brushX()
 		////////////////////////////////////////
 			c_svg.selectAll(".word-group")
 				.selectAll("path")
-				.attr("stroke", "black")
-				.attr("stroke-dasharray", "5,5")
-				.attr("fill", "none")
 				.attr("d", function(d) {
 					var x_hist_scale = x_scale;
 					var y_hist_scale = y_scale;
-					console.log(cur_year)
 					p = 'M' + x_hist_scale(d.decs[cur_year].u.rank) + ' ' + y_hist_scale(d.decs[cur_year].t.rank); 
-					for (var i = 1; i < 3; i ++) {
+					for (var i = 1; i <= 4; i ++) {
 						var new_hist_year = mod_year(cur_year, -10 * i)
-						x_hist_scale.domain(d3.extent(data, function(d) { return d.decs[new_hist_year].u.rank; }))
-						y_hist_scale.domain(d3.extent(data, function(d) { return d.decs[new_hist_year].t.rank; }))
-						
+					
 						p += ' L' + x_hist_scale(d.decs[new_hist_year].u.rank) + ' ' + y_hist_scale(d.decs[new_hist_year].t.rank);
 					}
 					return p;
@@ -182,6 +189,40 @@ tl_svg.selectAll('.tl-brush>.handle').remove();
 //tl_svg.selectAll('rect')
 //	.attr('fill', 'white')
 //	.attr('stroke', 'black')
+
+var linearGradient = c_svg.append("defs")
+	.append("linearGradient")
+    .attr("id", "linear-gradient")
+    .attr("x1", "0%")
+   	.attr("y1", "0%")
+   	.attr("x2", "100%")
+   	.attr("y2", "0%");
+
+linearGradient.append("stop")
+	.attr("offset", "0%")
+	.attr("stop-color", "white");
+
+linearGradient.append("stop")
+	.attr("offset", "100%")
+	.attr("stop-color", "black");
+
+var brushed_linearGradient = c_svg.select("defs")
+	.append("linearGradient")
+    .attr("id", "brushed-linear-gradient")
+    .attr("x1", "0%")
+   	.attr("y1", "0%")
+   	.attr("x2", "100%")
+   	.attr("y2", "0%");
+
+brushed_linearGradient.append("stop")
+	.attr("offset", "0%")
+	.attr("stop-color", "white");
+
+brushed_linearGradient.append("stop")
+	.attr("offset", "100%")
+	.attr("stop-color", "red");
+
+
 console.log(cur_year);
 ///////////////////////////////////////////////////////////////
 c_svg.selectAll("circle")
@@ -225,10 +266,12 @@ c_svg.selectAll("circle")
 			.text('--')
 	})
 	
-c_svg.selectAll(".word-group").
-	append("path")
-	//.attr("class", "point-hist-line");
-
+c_svg.selectAll(".word-group")
+	.append("path")
+	.attr("stroke", "url(#linear-gradient)")
+	.attr("stroke-dasharray", "5,5")
+	.attr("fill", "none")
+				
 	
 
 
