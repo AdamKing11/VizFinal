@@ -7,6 +7,16 @@
     font-size: 12px;
   }
 
+  .word-group-brushed {
+    fill: red;
+    stroke: red;
+  }
+
+  .word-group-unbrushed {
+    fill: black;
+    stroke: black;
+  }  
+  
   .point-brushed {
     fill: black;
     fill-opacity: 1;
@@ -23,6 +33,7 @@
   .point-mouseon {
     fill-opacity: 1;
     fill: blue;
+    stroke: blue;
   }
 
   .point-hist-line {
@@ -38,8 +49,8 @@
   <body style="padding: 0; margin: 0">
     <table>
     <tr> <td> <div id="c"> </div> </td> <td>
-    <textarea id="lexicon-text" rows="40" cols="16"></textarea>   
-    <textarea id="brushed-words-text" rows="40" cols="16"></textarea>    
+    <ul id="ul-lexicon" style="width: 100px; height: 500px; overflow: auto"> </ul>    </td> <td>   
+    <ul id="ul-brushed" style="width: 100px; height: 500px; overflow: auto"> </ul>
     </td> </tr>
     <tr> <td>
     <div id="tl"></div>

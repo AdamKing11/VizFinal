@@ -23,14 +23,22 @@ function calc_lex() {
 		lexicon.push(data[i].word);
 	}
 	lexicon.sort()
-	if (lexicon.length > 0) {
-		document.getElementById("lexicon-text").value = join_list(lexicon, '\n');
-	};
+	
+	d3.select("#ul-lexicon")
+		.selectAll("li")
+		.remove();
+
+	d3.select("#ul-lexicon")		
+		.selectAll("li")
+		.data(lexicon)
+		.enter()
+		.append("li")
+		.text(function(d) { return d; });
 }
 
 function mod_year(y, m) { return (parseInt(y) + m).toString();	}
 
-var initial_reg = '(wagon|computer)$'
+var initial_reg = '^(automobile|car)$'
 
 document.getElementById("data-regex").value = initial_reg;
 var lexicon = [];
@@ -165,10 +173,6 @@ linearGradient.append("stop")
 	.attr("offset", "0%")
 	.attr("stop-color", "gray");
 
-//linearGradient.append("stop")
-//	.attr("offset", "30%")
-//	.attr("stop-color", "gray");
-
 linearGradient.append("stop")
 	.attr("offset", "100%")
 	.attr("stop-color", "black");
@@ -195,6 +199,9 @@ brushed_linearGradient.append("stop")
 
 /////////
 
+
+//// svg title for TOOLTIPS
+
 function point_in_brush(px, py, brush_corners) {
 	var x_lower = brush_corners[0][0], x_upper = brush_corners[1][0];
 	var y_lower = brush_corners[0][1], y_upper = brush_corners[1][1];
@@ -207,47 +214,68 @@ var brush_corners;
 var point_brush = d3.brush()
 	.on('start', function(d) { 
 
-		var wgs = c_svg.selectAll('.word-group');
-
-		wgs.selectAll('circle')
+		c_svg.selectAll('.word-group')
+			.attr('fill', 'black')
+			.attr('stroke', 'black')
 			.attr('fill-opacity', 1)
-			.attr('fill', 'black');
+			.attr('stroke-opacity', 1);
 
-		wgs.selectAll('path')
-			.attr("stroke", "url(#linear-gradient)");
-		
-		document.getElementById("brushed-words-text").value = "";
+		d3.select("#ul-brushed")
+			.selectAll("li")
+			.remove();
 	})
-	.on('brush', function(d) {
+	.on('brush end', function(d) {
 		// gives back the top left corner and bottom right
 		brush_corners = d3.event.selection;
 		
-		// make non-brushed points grayed out
-		c_svg.selectAll('circle')
-			.attr('fill-opacity', .3);
-
+					
 		var brushed_words = [];
 		// select the right word-group objects
-		var bgs = c_svg.selectAll('.word-group')
+		c_svg.selectAll('.word-group')
 			.filter(function(e) { 
 				var x_rank = x_scale(e.decs[cur_year]['t'][scale_type]), y_rank = y_scale(e.decs[cur_year]['u'][scale_type]);
 				var should_highlight = point_in_brush(x_rank, y_rank, brush_corners);
 				if (should_highlight) { brushed_words.push(e.word); } 
 				return should_highlight;
 			})
-
-		bgs.selectAll('circle')
+			.attr("fill", "red")
+			.attr("stroke", "red")
 			.attr('fill-opacity', 1)
-			.attr('fill', 'red');
+			.attr('stroke-opacity', 1);
+		
 
-		bgs.selectAll('path')
-			.attr('stroke', 'url(#brushed-linear-gradient');
+		// make non-brushed points grayed out
+		c_svg.selectAll('.word-group')
+			filter(function(e) {
+				return brushed_words.indexOf(e.word) < 0;
+			})
+			.attr('fill', 'black')
+			.attr('stroke', 'black')
+			.attr('stroke-opacity', .3)
+			.attr('fill-opacity', .3);
+
+			//.attr('class', 'word-group-unbrushed')
+		
+		//bgs.selectAll('circle')
+		//	.attr('fill-opacity', 1)
+		//	.attr('fill', 'red');
+
+		//bgs.selectAll('path')
+		//	.attr('stroke', 'url(#brushed-linear-gradient');
 		
 		brushed_words.sort();
-		if (brushed_words.length > 0) {
-			var s = join_list(brushed_words, '\n');
-			document.getElementById("brushed-words-text").value = s;
-		}
+
+		d3.select("#ul-brushed")
+			.selectAll("li")
+			.remove();
+
+		d3.select("#ul-brushed")		
+			.selectAll("li")
+			.data(brushed_words)
+			.enter()
+			.append("li")
+			.text(function(d) { return d; });
+
 	})
   
 c_svg.append('g')
@@ -286,12 +314,12 @@ function move_tl_brush(d, new_year) {
 				}
 				return p;
 			})
-			.attr("stroke-opacity", 0)
-			.attr("stroke", "url(#linear-gradient)")
+			//.attr("stroke-opacity", 0)
+			//.attr("stroke", "url(#linear-gradient)")
 			.transition()
 			.delay(500)
 			.duration(500)
-			.attr("stroke-opacity", 1)
+			//.attr("stroke-opacity", 1)
 		////////////////////////////////////////
 	}
 }
@@ -322,6 +350,7 @@ function whole_tl() {
 	//
 }
 
+var selected_word = '';
 function draw_points() {
 	///////////////////////////////////////////////////////////////
 	c_svg.selectAll('.word-group')
@@ -332,17 +361,25 @@ function draw_points() {
 		.enter()
 		.append("g")
 		.attr('class', 'word-group')
+		.attr('fill', 'black')
+		.attr('stroke', 'black')
+		.attr('fill-opacity', 1)
 		.append("circle")
 		.attr('class', 'point-mouseoff')
 		.attr('r', function(d) { return wordsize_scale(d.word.length) })
 		.attr('cx', function(d) { return x_scale(d.decs[cur_year]['t'][scale_type]) })
 		.attr('cy', function(d) { return y_scale(d.decs[cur_year]['u'][scale_type]) })
-		.attr('fill', 'black')
 		.on('mouseover click', function(d) {
 			d3.select(this)
 				.attr('class', 'point-mouseon')
-				.attr('r', function(d) { return wordsize_scale(d.word.length) + 2});
-				
+				.attr('r', function(d) { selected_word = d.word; return wordsize_scale(d.word.length) + 2});
+			
+			d3.select("#ul-lexicon")
+				.selectAll("li")
+				.filter(function(w) { console.log(w, selected_word); return w === selected_word; })
+				.attr("font-color", "blue")
+				.attr("font-weight", "bold");
+
 			ws_svg.selectAll('.word-stats-word')
 				.transition()
 				.duration(500)
@@ -355,8 +392,13 @@ function draw_points() {
 		})
 		.on('mouseout', function(d) { 
 			d3.select(this)
-				.attr('r', function(d) { return wordsize_scale(d.word.length)})
+				.attr('r', function(d) { selected_word = d.word; return wordsize_scale(d.word.length)})
 				.attr('class', 'point-mouseoff');
+
+			d3.select("#ul-lexicon")
+				.selectAll("li")
+				.attr("font-color", "black")
+				.attr("font-weight", "normal");
 	
 			ws_svg.selectAll('.word-stats-word')
 				.transition()
@@ -367,13 +409,15 @@ function draw_points() {
 				.transition()
 				.duration(500)
 				.text('--')
-		});
+		})
+		.append("svg:title")
+		.text(function(d) { return d.word; });
 		
 	c_svg.selectAll(".word-group")
 		.append("path")
-		.attr("stroke", "url(#linear-gradient)")
-		.attr("stroke-dasharray", "5,5")
-		.attr("fill", "none");
+		//.attr("stroke", "url(#linear-gradient)")
+		.attr("fill", "none")
+		.attr("stroke-dasharray", "5,5");
 	///////////////////////////////////////////////////////////////
 }
 draw_points()
@@ -418,6 +462,7 @@ function scale_by(s_type) {
 			.transition()
 			.duration(500)
 			.text('Contextual Probability Rank');
+
 		c_svg.selectAll('.y-label')
 			.transition()
 			.duration(500)
