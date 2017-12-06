@@ -9,12 +9,36 @@ function regex_lexfilter(re) {
 	return data;
 }
 
-data = regex_lexfilter(/^th(e$|anksg)/);
+function join_list(l, c) {
+	s = l[0];
+	for (var i = 1; i < l.length; i++) {
+		s += c + l[i];
+	}
+	return s;
+}
+
+function calc_lex() {
+	lexicon = [];
+	for (var i = 0; i < data.length; i++) {
+		lexicon.push(data[i].word);
+	}
+	lexicon.sort()
+	if (lexicon.length > 0) {
+		document.getElementById("lexicon-text").value = join_list(lexicon, '\n');
+	};
+}
 
 function mod_year(y, m) { return (parseInt(y) + m).toString();	}
 
+
+
+
+data = regex_lexfilter(/^th(e$|anksg)/);
+var lexicon = [];
+calc_lex();
+
 var cur_year = '1950';
-var scale_type = 'rank';
+var scale_type = 'info';
 var min_year = 1800;
 var max_year = 2000;
 
@@ -26,6 +50,8 @@ var words_stats_w = 100;
 
 var x_offset = 75;
 var y_offset = 75;
+
+var tl_brush_ext = [cur_year, parseInt(cur_year) + 10];
 
 var c = d3.select("#c");
 var tl = d3.select("#tl");
@@ -42,6 +68,7 @@ var tl_svg = tl.append('svg')
 	.attr("width", width)
 	.attr("height", tl_height);
 
+
 function find_max_of_data(d, t) {
 	var l = [];
 	var dec_keys = Object.keys(d.decs)
@@ -52,31 +79,45 @@ function find_max_of_data(d, t) {
 }
 
 var x_scale = d3.scaleLinear()
-	.domain([0, d3.max(data, function(d) { return find_max_of_data(d, 'u') })])
-	.range([x_offset, width - x_offset ]);
+	.range([x_offset, width - x_offset ])
+	.domain([d3.max(data_full, function(d) { return find_max_of_data(d, 'u') }),0]);
 
 var y_scale = d3.scaleLinear()
-	.domain([0, d3.max(data, function(d) { return find_max_of_data(d, 't') })])
-	.range([height - y_offset, y_offset]);
+	.range([height - y_offset, y_offset])
+	.domain([d3.max(data_full, function(d) { return find_max_of_data(d, 't') }),0]);
 
 var tl_scale = d3.scaleLinear()
 	.domain([min_year, max_year])
-	.range([x_offset, width - x_offset]);
+	.range([x_offset * .5, width - (.5 * x_offset)]);
 
 var wordsize_scale = d3.scaleSqrt()
 	.domain([1, d3.max(data, function(d) { return d.word.length })])
 	.range([3,7]);
 
 // set up the axes
-c_svg.append("g")
-	.call(d3.axisBottom(x_scale))
+var px_axis = c_svg.append("g");
+px_axis.call(d3.axisBottom(x_scale))
 	.attr("transform", "translate(0," + (height - y_offset) + ")")
 	.attr("class", "x-axis");
 
 c_svg.append("g")
-	.call(d3.axisLeft(y_scale))
+	.append("text")
+	.attr('text-anchor', 'middle')
+	.attr("transform", "translate(" + (width * .5) + "," + (height - (.25 * y_offset)) + ")")
+	.text("Frequency");
+
+var py_axis = c_svg.append("g");
+py_axis.call(d3.axisLeft(y_scale))
 	.attr("transform", "translate(" + x_offset + ",0)")
 	.attr("class", "y-axis");
+
+c_svg.append("g")
+	.append("text")
+	.attr('transform', 'rotate(-90)')
+	.attr('x', -(height) * .65)
+	.attr('y', x_offset * .5)
+	.text("Contextual Probability");
+
 
 tl_svg.append("g")
 	.call(d3.axisBottom(tl_scale))
@@ -162,6 +203,8 @@ var point_brush = d3.brush()
 
 		wgs.selectAll('path')
 			.attr("stroke", "url(#linear-gradient)");
+		
+		document.getElementById("brushed-words-text").value = "";
 	})
 	.on('brush', function(d) {
 		// gives back the top left corner and bottom right
@@ -188,15 +231,16 @@ var point_brush = d3.brush()
 		bgs.selectAll('path')
 			.attr('stroke', 'url(#brushed-linear-gradient');
 		
-		console.log(brushed_words);
-
+		brushed_words.sort();
+		if (brushed_words.length > 0) {
+			var s = join_list(brushed_words, '\n');
+			document.getElementById("brushed-words-text").value = s;
+		}
 	})
   
 c_svg.append('g')
 	.attr('class', 'brush')
 	.call(point_brush);
-
-var tl_brush_ext = [cur_year, parseInt(cur_year) + 10];
 
 function move_tl_brush(d, new_year) {
 	if (new_year === undefined) {
@@ -236,17 +280,11 @@ function move_tl_brush(d, new_year) {
 			.delay(500)
 			.duration(500)
 			.attr("stroke-opacity", 1)
-			//.filter(function(d) {
-			//	var u_rank = x_scale(d.decs[cur_year]['u'][scale_type]), t_rank = y_scale(d.decs[cur_year]['t'][scale_type]);
-			//	return point_in_brush(u_rank, t_rank, brush_corners);
-			//})
-			//.attr("stroke", "url(#brushed-linear-gradient)");
 		////////////////////////////////////////
 	}
 }
 
 var tl_brush = d3.brushX()
-	//.extent([[x_scale(1700),0], [x_scale(2100),tl_height]])
 	.filter(function () {return d3.mouse(this)[0] > tl_scale(tl_brush_ext[0]) && d3.mouse(this)[0] < tl_scale(tl_brush_ext[1])})
 	.on('brush end', function(d) { move_tl_brush(d) } );
 
@@ -271,6 +309,7 @@ function whole_tl() {
 	move_tl_slider(1990, 3000);
 	//
 }
+
 
 function draw_points() {
 	///////////////////////////////////////////////////////////////
@@ -301,7 +340,7 @@ function draw_points() {
 			ws_svg.selectAll('.word-stats-rank')
 				.transition()
 				.duration(500)
-				.text(d.decs[cur_year]['u'][scale_type] + ', ' + d.decs[cur_year]['t'][scale_type]);
+				.text(d.decs[cur_year]['u'][scale_type].toFixed(2) + ', ' + d.decs[cur_year]['t'][scale_type].toFixed(2));
 		})
 		.on('mouseout', function(d) { 
 			d3.select(this)
@@ -330,9 +369,10 @@ draw_points()
 
 function scale_by(s_type) {
 	scale_type = s_type;
-
-	x_scale.domain([0, d3.max(data, function(d) { return find_max_of_data(d, 'u') })]);
-	y_scale.domain([0, d3.max(data, function(d) { return find_max_of_data(d, 't') })]);
+	var start = 0;
+	if (s_type === 'rank') { start = 1; }
+	x_scale.domain([d3.max(data_full, function(d) { return find_max_of_data(d, 'u') }), start]);
+	y_scale.domain([d3.max(data_full, function(d) { return find_max_of_data(d, 't') }), start]);
 
 	c_svg.selectAll(".x-axis")
 		.transition()
@@ -355,4 +395,11 @@ function scale_by(s_type) {
 	c_svg.selectAll('.word-group')
 		.selectAll('path')
 		.attr('d', '');
+}
+
+function change_lex() {
+	var r = new RegExp(document.getElementById("data-regex").value)
+	data = regex_lexfilter(r);
+	calc_lex();
+	draw_points();
 }

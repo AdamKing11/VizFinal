@@ -36,10 +36,29 @@
     <script src="d.js"></script>
   </head>
   <body style="padding: 0; margin: 0">
-    <div id="c"></div><br>
-    <div id="tl"></div><br>
-    <div id="rank-button"><button id="rank-button-b" onclick="scale_by('rank')"> Ranks </button></div>
-    <div id="info-button"><button id="info-button-b" onclick="scale_by('info')"> Infos </button></div>    
+    <table>
+    <tr> <td> <div id="c"> </div> </td> <td>
+    <textarea id="lexicon-text" rows="40" cols="16"></textarea>   
+    <textarea id="brushed-words-text" rows="40" cols="16"></textarea>    
+    </td> </tr>
+    <tr> <td>
+    <div id="tl"></div>
+
+    </td> <td> 
+      <textarea id="data-regex" rows="1" cols="18">^th(e$|anksg)</textarea> <br>
+      <button id="change-lex" onclick="change_lex()"> Mod! </button>
+    </td> </tr>
+
+    <tr> <td>
+    <div id="buttons">
+      <center>
+      <button id="rank-button" onclick="scale_by('rank')"> Ranks </button>
+      <button id="info-button" onclick="scale_by('info')"> Infos </button>
+      </center>
+    </div>
+    </td> 
+    </tr>
+    </table>
     <script src="main.js"></script>
   </body>
 </html>
