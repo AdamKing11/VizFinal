@@ -105,7 +105,7 @@ c_svg.append("g")
 	.append("text")
 	.attr('text-anchor', 'middle')
 	.attr("transform", "translate(" + (width * .5) + "," + (height - (.25 * y_offset)) + ")")
-	.text("-Log Contextual Probability")
+	.text("-log Contextual Probability")
 	.attr("class", "x-label");
 // y axis
 var py_axis = c_svg.append("g");
@@ -118,9 +118,19 @@ c_svg.append("g")
 	.attr('transform', 'rotate(-90)')
 	.attr('x', -(height) * .65)
 	.attr('y', x_offset * .35)
-	.text("-Log Unigram Probability")
+	.text("-log Unigram Probability")
 	.attr("class", "x-label");
 
+// set up the title
+c_svg.append("g")
+	.append("text")
+	.attr('text-anchor', 'middle')
+	.attr("transform", "translate(" + (width * .5) + "," + (.5 * y_offset) + ")")
+	.attr("font-size", 22)
+	.attr("class", "chart-title")
+	.text("Ordered by Rank");
+
+// set up the timeline
 tl_svg.append("g")
 	.call(d3.axisBottom(tl_scale))
 	.attr("transform", "translate(0," + (tl_height/2) + ")");
@@ -387,6 +397,7 @@ function scale_by(s_type) {
 		.call(d3.axisLeft(y_scale))
 		.attr("transform", "translate(" + x_offset + ",0)")
 
+
 	c_svg.selectAll("circle")
 		.transition()
 		.duration(500)
@@ -398,6 +409,11 @@ function scale_by(s_type) {
 		.attr('d', '');
 
 	if (s_type === 'rank') {
+		c_svg.selectAll('.chart-title')
+			.transition()
+			.duration(500)
+			.text('Ordered by Rank');
+
 		c_svg.selectAll('.x-label')
 			.transition()
 			.duration(500)
@@ -407,6 +423,11 @@ function scale_by(s_type) {
 			.duration(500)
 			.text('Unigram Rank');
 	} else {
+		c_svg.selectAll('.chart-title')
+			.transition()
+			.duration(500)
+			.text('Ordered by -log Probability');
+
 		c_svg.selectAll('.x-label')
 			.transition()
 			.duration(500)
