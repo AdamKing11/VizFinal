@@ -34,7 +34,7 @@
   <head>
     <script src="d3.v4.js"></script>
     <script src="d.js"></script>
-  </head>
+    </head>
   <body style="padding: 0; margin: 0">
     <table>
     <tr> <td> <div id="c"> </div> </td> <td>
@@ -45,7 +45,7 @@
     <div id="tl"></div>
 
     </td> <td> 
-      <textarea id="data-regex" rows="1" cols="18">^th(e$|anksg)</textarea> <br>
+      <textarea id="data-regex" rows="1" cols="18"></textarea> <br>
       <button id="change-lex" onclick="change_lex()"> Mod! </button>
     </td> </tr>
 
@@ -54,12 +54,15 @@
       <center>
       <button id="rank-button" onclick="scale_by('rank')"> Ranks </button>
       <button id="info-button" onclick="scale_by('info')"> Infos </button>
+      <button id="tl-start" onclick="move_tl_slider(min_year)"> TL Start </button>
+      <button id="tl-end" onclick="move_tl_slider(max_year)"> TL End </button>
       </center>
     </div>
     </td> 
     </tr>
     </table>
-    <script src="main.js"></script>
+   <script src="main.js"></script>
+
   </body>
 </html>
   

@@ -30,11 +30,11 @@ function calc_lex() {
 
 function mod_year(y, m) { return (parseInt(y) + m).toString();	}
 
+var initial_reg = '(wagon|computer)$'
 
-
-
-data = regex_lexfilter(/^th(e$|anksg)/);
+document.getElementById("data-regex").value = initial_reg;
 var lexicon = [];
+var data = regex_lexfilter(new RegExp(document.getElementById("data-regex").value));
 calc_lex();
 
 var cur_year = '1950';
@@ -80,11 +80,11 @@ function find_max_of_data(d, t) {
 
 var x_scale = d3.scaleLinear()
 	.range([x_offset, width - x_offset ])
-	.domain([d3.max(data_full, function(d) { return find_max_of_data(d, 'u') }),0]);
+	.domain([d3.max(data_full, function(d) { return find_max_of_data(d, 't') }),0]);
 
 var y_scale = d3.scaleLinear()
 	.range([height - y_offset, y_offset])
-	.domain([d3.max(data_full, function(d) { return find_max_of_data(d, 't') }),0]);
+	.domain([d3.max(data_full, function(d) { return find_max_of_data(d, 'u') }),0]);
 
 var tl_scale = d3.scaleLinear()
 	.domain([min_year, max_year])
@@ -95,29 +95,31 @@ var wordsize_scale = d3.scaleSqrt()
 	.range([3,7]);
 
 // set up the axes
+// x axis
 var px_axis = c_svg.append("g");
 px_axis.call(d3.axisBottom(x_scale))
 	.attr("transform", "translate(0," + (height - y_offset) + ")")
 	.attr("class", "x-axis");
-
+// x label
 c_svg.append("g")
 	.append("text")
 	.attr('text-anchor', 'middle')
 	.attr("transform", "translate(" + (width * .5) + "," + (height - (.25 * y_offset)) + ")")
-	.text("Frequency");
-
+	.text("-Log Contextual Probability")
+	.attr("class", "x-label");
+// y axis
 var py_axis = c_svg.append("g");
 py_axis.call(d3.axisLeft(y_scale))
 	.attr("transform", "translate(" + x_offset + ",0)")
 	.attr("class", "y-axis");
-
+// y label
 c_svg.append("g")
 	.append("text")
 	.attr('transform', 'rotate(-90)')
 	.attr('x', -(height) * .65)
-	.attr('y', x_offset * .5)
-	.text("Contextual Probability");
-
+	.attr('y', x_offset * .35)
+	.text("-Log Unigram Probability")
+	.attr("class", "x-label");
 
 tl_svg.append("g")
 	.call(d3.axisBottom(tl_scale))
@@ -151,11 +153,11 @@ var linearGradient = c_svg.append("defs")
 
 linearGradient.append("stop")
 	.attr("offset", "0%")
-	.attr("stop-color", "white");
-
-linearGradient.append("stop")
-	.attr("offset", "30%")
 	.attr("stop-color", "gray");
+
+//linearGradient.append("stop")
+//	.attr("offset", "30%")
+//	.attr("stop-color", "gray");
 
 linearGradient.append("stop")
 	.attr("offset", "100%")
@@ -171,11 +173,11 @@ var brushed_linearGradient = c_svg.select("defs")
 
 brushed_linearGradient.append("stop")
 	.attr("offset", "0%")
-	.attr("stop-color", "white");
-
-brushed_linearGradient.append("stop")
-	.attr("offset", "30%")
 	.attr("stop-color", "gray");
+
+//brushed_linearGradient.append("stop")
+//	.attr("offset", "30%")
+//	.attr("stop-color", "gray");
 
 brushed_linearGradient.append("stop")
 	.attr("offset", "100%")
@@ -218,8 +220,8 @@ var point_brush = d3.brush()
 		// select the right word-group objects
 		var bgs = c_svg.selectAll('.word-group')
 			.filter(function(e) { 
-				var u_rank = x_scale(e.decs[cur_year]['u'][scale_type]), t_rank = y_scale(e.decs[cur_year]['t'][scale_type]);
-				var should_highlight = point_in_brush(u_rank, t_rank, brush_corners);
+				var x_rank = x_scale(e.decs[cur_year]['t'][scale_type]), y_rank = y_scale(e.decs[cur_year]['u'][scale_type]);
+				var should_highlight = point_in_brush(x_rank, y_rank, brush_corners);
 				if (should_highlight) { brushed_words.push(e.word); } 
 				return should_highlight;
 			})
@@ -255,9 +257,9 @@ function move_tl_brush(d, new_year) {
 			
 		c_svg.selectAll("circle")
 			.transition()
-			.duration(500)
-			.attr('cx', function(d) { return x_scale(d.decs[cur_year]['u'][scale_type]) })
-			.attr('cy', function(d) { return y_scale(d.decs[cur_year]['t'][scale_type]) });
+			.duration(100)
+			.attr('cx', function(d) { return x_scale(d.decs[cur_year]['t'][scale_type]) })
+			.attr('cy', function(d) { return y_scale(d.decs[cur_year]['u'][scale_type]) });
 
 		////////////////////////////////////////
 		c_svg.selectAll(".word-group")
@@ -265,11 +267,11 @@ function move_tl_brush(d, new_year) {
 			.attr("d", function(d) {
 				var x_hist_scale = x_scale;
 				var y_hist_scale = y_scale;
-				p = 'M' + x_hist_scale(d.decs[cur_year]['u'][scale_type]) + ' ' + y_hist_scale(d.decs[cur_year]['t'][scale_type]); 
+				p = 'M' + x_hist_scale(d.decs[cur_year]['t'][scale_type]) + ' ' + y_hist_scale(d.decs[cur_year]['u'][scale_type]); 
 				for (var i = 1; i <= 10; i ++) {
 					var new_hist_year = mod_year(cur_year, -10 * i)
 					if (new_hist_year >= min_year) {
-						p += ' L' + x_hist_scale(d.decs[new_hist_year]['u'][scale_type]) + ' ' + y_hist_scale(d.decs[new_hist_year]['t'][scale_type]);
+						p += ' L' + x_hist_scale(d.decs[new_hist_year]['t'][scale_type]) + ' ' + y_hist_scale(d.decs[new_hist_year]['u'][scale_type]);
 					}
 				}
 				return p;
@@ -286,7 +288,7 @@ function move_tl_brush(d, new_year) {
 
 var tl_brush = d3.brushX()
 	.filter(function () {return d3.mouse(this)[0] > tl_scale(tl_brush_ext[0]) && d3.mouse(this)[0] < tl_scale(tl_brush_ext[1])})
-	.on('brush end', function(d) { move_tl_brush(d) } );
+	.on('brush', function(d) { move_tl_brush(d) } );
 
 var tl_bg = tl_svg.append('g')
 	.call(tl_brush)
@@ -298,18 +300,17 @@ tl_svg.selectAll('.tl-brush>.handle').remove();
 
 function move_tl_slider(new_year, dur) {
 	if (dur === undefined) {
-		dur = 500;
+		dur = 50 * Math.abs(cur_year - new_year);
 	}
 	tl_bg.transition()
 		.duration(dur)
-		.call(tl_brush.move, [new_year, new_year].map(tl_scale));
+		.call(tl_brush.move, [new_year-5, new_year+5].map(tl_scale));
 }
 
 function whole_tl() {
-	move_tl_slider(1990, 3000);
+	move_tl_slider(2000, 6000);
 	//
 }
-
 
 function draw_points() {
 	///////////////////////////////////////////////////////////////
@@ -324,8 +325,8 @@ function draw_points() {
 		.append("circle")
 		.attr('class', 'point-mouseoff')
 		.attr('r', function(d) { return wordsize_scale(d.word.length) })
-		.attr('cx', function(d) { return x_scale(d.decs[cur_year]['u'][scale_type]) })
-		.attr('cy', function(d) { return y_scale(d.decs[cur_year]['t'][scale_type]) })
+		.attr('cx', function(d) { return x_scale(d.decs[cur_year]['t'][scale_type]) })
+		.attr('cy', function(d) { return y_scale(d.decs[cur_year]['u'][scale_type]) })
 		.attr('fill', 'black')
 		.on('mouseover click', function(d) {
 			d3.select(this)
@@ -340,7 +341,7 @@ function draw_points() {
 			ws_svg.selectAll('.word-stats-rank')
 				.transition()
 				.duration(500)
-				.text(d.decs[cur_year]['u'][scale_type].toFixed(2) + ', ' + d.decs[cur_year]['t'][scale_type].toFixed(2));
+				.text(d.decs[cur_year]['t'][scale_type].toFixed(2) + ', ' + d.decs[cur_year]['u'][scale_type].toFixed(2));
 		})
 		.on('mouseout', function(d) { 
 			d3.select(this)
@@ -371,8 +372,8 @@ function scale_by(s_type) {
 	scale_type = s_type;
 	var start = 0;
 	if (s_type === 'rank') { start = 1; }
-	x_scale.domain([d3.max(data_full, function(d) { return find_max_of_data(d, 'u') }), start]);
-	y_scale.domain([d3.max(data_full, function(d) { return find_max_of_data(d, 't') }), start]);
+	x_scale.domain([d3.max(data_full, function(d) { return find_max_of_data(d, 't') }), start]);
+	y_scale.domain([d3.max(data_full, function(d) { return find_max_of_data(d, 'u') }), start]);
 
 	c_svg.selectAll(".x-axis")
 		.transition()
@@ -389,12 +390,32 @@ function scale_by(s_type) {
 	c_svg.selectAll("circle")
 		.transition()
 		.duration(500)
-		.attr('cx', function(d) { return x_scale(d.decs[cur_year]['u'][scale_type]) })
-		.attr('cy', function(d) { return y_scale(d.decs[cur_year]['t'][scale_type]) });
+		.attr('cx', function(d) { return x_scale(d.decs[cur_year]['t'][scale_type]) })
+		.attr('cy', function(d) { return y_scale(d.decs[cur_year]['u'][scale_type]) });
 
 	c_svg.selectAll('.word-group')
 		.selectAll('path')
 		.attr('d', '');
+
+	if (s_type === 'rank') {
+		c_svg.selectAll('.x-label')
+			.transition()
+			.duration(500)
+			.text('Contextual Probability Rank');
+		c_svg.selectAll('.y-label')
+			.transition()
+			.duration(500)
+			.text('Unigram Rank');
+	} else {
+		c_svg.selectAll('.x-label')
+			.transition()
+			.duration(500)
+			.text('-log Contextual Probability');
+		c_svg.selectAll('.y-label')
+			.transition()
+			.duration(500)
+			.text('-log Unigram Probability');
+	}
 }
 
 function change_lex() {
@@ -403,3 +424,4 @@ function change_lex() {
 	calc_lex();
 	draw_points();
 }
+
