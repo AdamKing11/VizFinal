@@ -1,3 +1,6 @@
+
+// some "helper functions" first....
+// from our large data file, only select the subset that matches the regex filter
 function regex_lexfilter(re) {
 	// data_full is the name of the full dataset
 	var data = [];
@@ -16,7 +19,7 @@ function join_list(l, c) {
 	}
 	return s;
 }
-
+// get list of words in our current data
 function calc_lex() {
 	lexicon = [];
 	for (var i = 0; i < data.length; i++) {
@@ -38,6 +41,28 @@ function calc_lex() {
 
 function mod_year(y, m) { return (parseInt(y) + m).toString();	}
 
+// because of the way I set up the data, need this function to go into the data structure
+// to find the max value for stuff
+function find_max_of_data(d, t) {
+	var l = [];
+	var dec_keys = Object.keys(d.decs)
+	for (var i = 0; i < dec_keys.length; i++) {
+		l.push(d.decs[dec_keys[i]][t][scale_type]);
+	}
+	return Math.max(...l);	
+}
+
+// for our brush, given an x and y, is that within the confines of the passed brush?
+function point_in_brush(px, py, b_c) {
+	if (b_c === null) { return false; }
+	var x_lower = b_c[0][0], x_upper = b_c[1][0];
+	var y_lower = b_c[0][1], y_upper = b_c[1][1];
+	return ((px >= x_lower && px <= x_upper) &&
+			(py >= y_lower && py <= y_upper));
+}
+
+
+// set up variables.....
 var initial_reg = '^(automobile|car)$'
 
 document.getElementById("data-regex").value = initial_reg;
@@ -65,9 +90,9 @@ var mouseon_color = "blue";
 var future_color = "green";
 var past_color = "orange";
 
-
 var tl_brush_ext = [cur_year, parseInt(cur_year) + 10];
 
+// start building the skeletons for the graphs
 var c = d3.select("#c");
 var tl = d3.select("#tl");
 
@@ -78,16 +103,6 @@ var c_svg = c.append('svg')
 var tl_svg = tl.append('svg')
 	.attr("width", width)
 	.attr("height", tl_height);
-
-
-function find_max_of_data(d, t) {
-	var l = [];
-	var dec_keys = Object.keys(d.decs)
-	for (var i = 0; i < dec_keys.length; i++) {
-		l.push(d.decs[dec_keys[i]][t][scale_type]);
-	}
-	return Math.max(...l);	
-}
 
 var x_scale = d3.scaleLinear()
 	.range([x_offset, width - x_offset ])
@@ -142,6 +157,8 @@ c_svg.append("g")
 	.text("-log Probability Rank");
 
 // helper arrows
+// these little graphics let the viewer keep grounded and remember what a big value
+// for either factor means...
 var top_helper = c_svg.append("g");
 top_helper.append("text")
 	.attr('text-anchor', 'middle')
@@ -156,7 +173,6 @@ top_helper.append("path")
 		" L" + (width * .85) + " " + (.85 * y_offset));
 
 var side_helper = c_svg.append("g");
-
 side_helper.append("text")
 	.attr('text-anchor', 'middle')
 	.attr("font-size", 12)
@@ -177,42 +193,12 @@ tl_svg.append("g")
 	.call(d3.axisBottom(tl_scale))
 	.attr("transform", "translate(0," + (tl_height/2) + ")");
 
-/*
-// set up the little info tool tip
-var ws_svg = c.append('svg')
-	.attr("width", words_stats_w)
-	.attr("height", height);
-
-ws_svg.append("g")
-	.append("text")
-	.attr('text-anchor', 'middle')
-	.attr('x', (words_stats_w/2))
-	.attr('y', y_offset)
-	.attr('class', 'word-stats-word')
-	.text("----");
-
-ws_svg.append("g")
-	.append("text")
-	.attr('text-anchor', 'middle')
-	.attr('x', (words_stats_w/2))
-	.attr('y', 1.25 * y_offset)
-	.attr('class', 'word-stats-rank')
-	.text("--");
-*/
-function point_in_brush(px, py, b_c) {
-	if (b_c === null) { return false; }
-	var x_lower = b_c[0][0], x_upper = b_c[1][0];
-	var y_lower = b_c[0][1], y_upper = b_c[1][1];
-	return ((px >= x_lower && px <= x_upper) &&
-			(py >= y_lower && py <= y_upper));
-}
-
 var brush_corners;
 var brushed_words = [];
 
 var point_brush = d3.brush()
 	.on('start', function(d) { 
-
+		// when we click to start the brush, reset everything
 		c_svg.selectAll('.word-group')
 			.filter(function(e) {
 				return brushed_words.indexOf(e.word) < 0;
@@ -227,6 +213,8 @@ var point_brush = d3.brush()
 			.attr("style", "color: black; font-weight: normal");
 	})
 	.on('brush end', function(d) {
+		// once we're dragging the brush, highlight the words within
+
 		// gives back the top left corner and bottom right
 		brush_corners = d3.event.selection;
 		
@@ -239,6 +227,7 @@ var point_brush = d3.brush()
 				if (should_highlight) { brushed_words.push(e.word); } 
 				return should_highlight;
 			})
+			// highlight the circles
 			.attr("fill", brushed_color)
 			.attr("stroke", brushed_color)
 			.attr('fill-opacity', 1)
@@ -269,11 +258,13 @@ var point_brush = d3.brush()
 			.filter(function(w) { return brushed_words.indexOf(w) < 0; })
 			.attr("style", "color: black; font-weight: normal");
 	})
-  
+
+// add the brush
 c_svg.append('g')
 	.attr('class', 'brush')
 	.call(point_brush);
 
+// build a path for the future or past of a data point
 function historic_path(d, min_step, max_step) {
 	var x_hist_scale = x_scale;
 	var y_hist_scale = y_scale;
@@ -304,10 +295,10 @@ function move_tl_brush(d, new_year) {
 	if (new_year >= min_year & new_year <= max_year) {
 		var time_passed = cur_year - new_year;
 		cur_year = new_year.toString();
-			
+
+		// animation for moving the circle to the new point
 		c_svg.selectAll("circle")
 			.transition()
-			// default at 50
 			.duration(100)
 			.attr('cx', function(d) { return x_scale(d.decs[cur_year]['t'][scale_type]) })
 			.attr('cy', function(d) { return y_scale(d.decs[cur_year]['u'][scale_type]) });
@@ -327,6 +318,8 @@ function move_tl_brush(d, new_year) {
 			.attr("d", function(d) {
 				return historic_path(d, 0, 7);
 			})
+		// use this animation to keep the path invisible until a little while AFTER the movement
+		// this keeps the graphs from getting crazy during long, quick movements on the timeline
 			.transition()
 			.delay(500)
 			.duration(500)
@@ -359,6 +352,7 @@ var tl_bg = tl_svg.append('g')
 	.attr('class', 'tl-brush')
 	.call(tl_brush.move, [cur_year-5, parseInt(cur_year) + 5].map(tl_scale));
 
+// hack: this keeps the timeline brush from being re-sized
 tl_svg.selectAll('.tl-brush>.handle').remove();
 
 
@@ -371,6 +365,7 @@ function move_tl_slider(new_year, dur) {
 		.call(tl_brush.move, [new_year-5, new_year+5].map(tl_scale));
 }
 
+// this functon draws out the points for all words we're currently interested in
 var selected_word = '';
 function draw_points() {
 	///////////////////////////////////////////////////////////////
@@ -404,17 +399,6 @@ function draw_points() {
 				.selectAll("li")
 				.filter(function(w) { return w === selected_word; })
 				.attr("style", "color: " + mouseon_color + "; font-weight: bold");
-/*
-			ws_svg.selectAll('.word-stats-word')
-				.transition()
-				.duration(500)
-				.text(d.word);
-	
-			ws_svg.selectAll('.word-stats-rank')
-				.transition()
-				.duration(500)
-				.text(d.decs[cur_year]['t'][scale_type].toFixed(2) + ', ' + d.decs[cur_year]['u'][scale_type].toFixed(2));
-*/
 		})
 		.on('mouseout', function(d) { 
 			d3.select(this)
@@ -436,17 +420,6 @@ function draw_points() {
 					.selectAll("li")
 					.attr("style", "color: black; font-weight: normal");				
 			}
-/*
-			ws_svg.selectAll('.word-stats-word')
-				.transition()
-				.duration(500)
-				.text('----');
-	
-			ws_svg.selectAll('.word-stats-rank')
-				.transition()
-				.duration(500)
-				.text('--')
-*/
 		})
 		.append("svg:title")
 		.text(function(d) { return d.word; });
@@ -458,7 +431,7 @@ function draw_points() {
 	///////////////////////////////////////////////////////////////
 }
 draw_points()
-
+// for changing from raw -log probability to ranks and vice versa
 function scale_by(s_type) {
 	scale_type = s_type;
 	var start = 0;
@@ -517,6 +490,7 @@ function scale_by(s_type) {
 	}
 }
 
+// for filtering the total data by the regular expression
 function change_lex() {
 	var r = new RegExp(document.getElementById("data-regex").value)
 	data = regex_lexfilter(r);
