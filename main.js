@@ -1,3 +1,5 @@
+// set up variables.....
+var initial_reg = '^cheese|^wine$'
 var brushed_color = "red";
 var mouseon_color = "blue";
 var future_color = "green";
@@ -108,10 +110,6 @@ function point_in_brush(px, py, b_c) {
 			(py >= y_lower && py <= y_upper));
 }
 
-
-// set up variables.....
-var initial_reg = '^(automobile|car)$'
-
 document.getElementById("data-regex").value = initial_reg;
 var lexicon = [];
 var data = regex_lexfilter(new RegExp(document.getElementById("data-regex").value));
@@ -195,7 +193,7 @@ c_svg.append("g")
 	.attr("transform", "translate(" + (width * .5) + "," + (.5 * y_offset) + ")")
 	.attr("font-size", 22)
 	.attr("class", "chart-title")
-	.text("-log Probability Rank");
+	.text("-log Probability");
 
 // helper arrows
 // these little graphics let the viewer keep grounded and remember what a big value
