@@ -49,24 +49,25 @@
   <body style="padding: 0; margin: 0">
     <table>
     <tr> <td> <div id="c"> </div> </td> <td>
-    <ul id="ul-lexicon" style="width: 100px; height: 500px; overflow: auto"> </ul>    </td> <td>   
-    <ul id="ul-brushed" style="width: 100px; height: 500px; overflow: auto"> </ul>
+    <center>
+    <textarea id="data-regex" rows="1" cols="18"></textarea> <br>
+    <button id="change-lex" onclick="change_lex()"> Filter Lexicon </button> <br>
+    </center>
+    <ul id="ul-lexicon" style="width: 125px; height: 500px; overflow: auto"> </ul> 
     </td> </tr>
     <tr> <td>
-    <div id="tl"></div>
-
-    </td> <td> 
-      <textarea id="data-regex" rows="1" cols="18"></textarea> <br>
-      <button id="change-lex" onclick="change_lex()"> Mod! </button>
-    </td> </tr>
-
-    <tr> <td>
-    <div id="buttons">
       <center>
-      <button id="rank-button" onclick="scale_by('rank')"> Ranks </button>
-      <button id="info-button" onclick="scale_by('info')"> Infos </button>
-      <button id="tl-start" onclick="move_tl_slider(min_year)"> TL Start </button>
-      <button id="tl-end" onclick="move_tl_slider(max_year)"> TL End </button>
+      <button id="rank-button" onclick="scale_by('rank')"> Graph by Ranks </button>
+      <button id="info-button" onclick="scale_by('info')"> Graph by -log Prob </button>
+      </center>
+    <div id="tl"></div>
+    </td> </tr>
+
+    <tr> <td>
+    <div id="tl-buttons">
+      <center>
+      <button id="tl-start" onclick="move_tl_slider(min_year)"> Move to Timeline Start </button>
+      <button id="tl-end" onclick="move_tl_slider(max_year)"> Move to Timelint End End </button>
       </center>
     </div>
     </td> 

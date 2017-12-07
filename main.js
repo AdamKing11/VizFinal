@@ -50,14 +50,21 @@ var scale_type = 'info';
 var min_year = 1800;
 var max_year = 2000;
 
-var width = 700;
-var height = 600;
+var width = 800;
+var height = 700;
 
 var tl_height = 100;
 var words_stats_w = 100;
 
-var x_offset = 75;
-var y_offset = 75;
+var x_offset = 100;
+var y_offset = 100;
+
+
+var brushed_color = "red";
+var mouseon_color = "blue";
+var future_color = "green";
+var past_color = "orange";
+
 
 var tl_brush_ext = [cur_year, parseInt(cur_year) + 10];
 
@@ -127,7 +134,7 @@ c_svg.append("g")
 	.attr('x', -(height) * .65)
 	.attr('y', x_offset * .35)
 	.text("-log Unigram Probability")
-	.attr("class", "x-label");
+	.attr("class", "y-label");
 
 // set up the title
 c_svg.append("g")
@@ -136,7 +143,38 @@ c_svg.append("g")
 	.attr("transform", "translate(" + (width * .5) + "," + (.5 * y_offset) + ")")
 	.attr("font-size", 22)
 	.attr("class", "chart-title")
-	.text("Ordered by Rank");
+	.text("-log Probability Rank");
+
+// helper arrows
+var top_helper = c_svg.append("g");
+top_helper.append("text")
+	.attr('text-anchor', 'middle')
+	.attr("transform", "translate(" + (width * .75) + "," + (.75 * y_offset) + ")")
+	.attr("font-size", 12)
+	.text("More Contextually Probable");	
+
+top_helper.append("path")
+	.attr("stroke", "black")
+	.attr("d", "M" + (width * .6) + " " + (.85 * y_offset) + " L" + (width * .85) + " " + (.85 * y_offset) +
+		"L" + (width * .825) + " " + (.8 * y_offset) + " L" + (width * .825) + " " + (.9 * y_offset) +	
+		" L" + (width * .85) + " " + (.85 * y_offset));
+
+var side_helper = c_svg.append("g");
+
+side_helper.append("text")
+	.attr('text-anchor', 'middle')
+	.attr("font-size", 12)
+	.attr('transform', 'rotate(-90)')
+	.attr('x', -height * .35)
+	.attr('y', width * .95)
+	.text("More Frequent");
+	
+side_helper.append("path")
+	.attr("stroke", "black")
+	.attr("d", "M" + (width * .925) + " " + (.5 * height) + " L" + (width * .925) + " " + (.2 * height) +
+		"L" + (width * .9175) + " " + (.225 * height) + " L" + (width * .9325) + " " + (.225 * height) +
+		" L" + (width * .925) + " " + (.2 * height));
+
 
 // set up the timeline
 tl_svg.append("g")
@@ -160,76 +198,38 @@ ws_svg.append("g")
 	.attr('class', 'word-stats-rank')
 	.text("--");
 
-// set up the gradients (for historic paths)
-var linearGradient = c_svg.append("defs")
-	.append("linearGradient")
-    .attr("id", "linear-gradient")
-    .attr("x1", "0%")
-   	.attr("y1", "0%")
-   	.attr("x2", "100%")
-   	.attr("y2", "0%");
-
-linearGradient.append("stop")
-	.attr("offset", "0%")
-	.attr("stop-color", "gray");
-
-linearGradient.append("stop")
-	.attr("offset", "100%")
-	.attr("stop-color", "black");
-
-var brushed_linearGradient = c_svg.select("defs")
-	.append("linearGradient")
-    .attr("id", "brushed-linear-gradient")
-    .attr("x1", "0%")
-   	.attr("y1", "0%")
-   	.attr("x2", "100%")
-   	.attr("y2", "0%");
-
-brushed_linearGradient.append("stop")
-	.attr("offset", "0%")
-	.attr("stop-color", "gray");
-
-//brushed_linearGradient.append("stop")
-//	.attr("offset", "30%")
-//	.attr("stop-color", "gray");
-
-brushed_linearGradient.append("stop")
-	.attr("offset", "100%")
-	.attr("stop-color", "red");
-
-/////////
-
-
-//// svg title for TOOLTIPS
-
-function point_in_brush(px, py, brush_corners) {
-	var x_lower = brush_corners[0][0], x_upper = brush_corners[1][0];
-	var y_lower = brush_corners[0][1], y_upper = brush_corners[1][1];
+function point_in_brush(px, py, b_c) {
+	if (b_c === null) { return false; }
+	var x_lower = b_c[0][0], x_upper = b_c[1][0];
+	var y_lower = b_c[0][1], y_upper = b_c[1][1];
 	return ((px >= x_lower && px <= x_upper) &&
 			(py >= y_lower && py <= y_upper));
 }
 
 var brush_corners;
+var brushed_words = [];
 
 var point_brush = d3.brush()
 	.on('start', function(d) { 
 
 		c_svg.selectAll('.word-group')
+			.filter(function(e) {
+				return brushed_words.indexOf(e.word) < 0;
+			})
 			.attr('fill', 'black')
 			.attr('stroke', 'black')
 			.attr('fill-opacity', 1)
 			.attr('stroke-opacity', 1);
 
-		d3.select("#ul-brushed")
+		d3.select("#ul-lexicon")
 			.selectAll("li")
-			.remove();
+			.attr("style", "color: black; font-weight: normal");
 	})
 	.on('brush end', function(d) {
 		// gives back the top left corner and bottom right
 		brush_corners = d3.event.selection;
 		
-					
-		var brushed_words = [];
+		brushed_words = [];
 		// select the right word-group objects
 		c_svg.selectAll('.word-group')
 			.filter(function(e) { 
@@ -238,63 +238,75 @@ var point_brush = d3.brush()
 				if (should_highlight) { brushed_words.push(e.word); } 
 				return should_highlight;
 			})
-			.attr("fill", "red")
-			.attr("stroke", "red")
+			.attr("fill", brushed_color)
+			.attr("stroke", brushed_color)
 			.attr('fill-opacity', 1)
 			.attr('stroke-opacity', 1);
 		
 
 		// make non-brushed points grayed out
-		c_svg.selectAll('.word-group')
-			filter(function(e) {
-				return brushed_words.indexOf(e.word) < 0;
-			})
-			.attr('fill', 'black')
-			.attr('stroke', 'black')
-			.attr('stroke-opacity', .3)
-			.attr('fill-opacity', .3);
-
-			//.attr('class', 'word-group-unbrushed')
-		
-		//bgs.selectAll('circle')
-		//	.attr('fill-opacity', 1)
-		//	.attr('fill', 'red');
-
-		//bgs.selectAll('path')
-		//	.attr('stroke', 'url(#brushed-linear-gradient');
-		
+		if (brushed_words.length > 0) {
+			c_svg.selectAll('.word-group')
+				.filter(function(e) {
+					return brushed_words.indexOf(e.word) < 0;
+				})
+				.attr('fill', 'black')
+				.attr('stroke', 'black')
+				.attr('stroke-opacity', .3)
+				.attr('fill-opacity', .3);
+		}
 		brushed_words.sort();
 
-		d3.select("#ul-brushed")
+		// highlight the selected words
+		d3.select("#ul-lexicon")
 			.selectAll("li")
-			.remove();
+			.filter(function(w) { return brushed_words.indexOf(w) >= 0; })
+			.attr("style", "color: " + brushed_color + "; font-weight: bold");
 
-		d3.select("#ul-brushed")		
+		d3.select("#ul-lexicon")
 			.selectAll("li")
-			.data(brushed_words)
-			.enter()
-			.append("li")
-			.text(function(d) { return d; });
-
+			.filter(function(w) { return brushed_words.indexOf(w) < 0; })
+			.attr("style", "color: black; font-weight: normal");
 	})
   
 c_svg.append('g')
 	.attr('class', 'brush')
 	.call(point_brush);
 
+function historic_path(d, min_step, max_step) {
+	var x_hist_scale = x_scale;
+	var y_hist_scale = y_scale;
+	var p = '';
+	for (var i = min_step; i <= max_step; i ++) {
+		var new_hist_year = mod_year(cur_year, -10 * i)
+		if (new_hist_year >= min_year && new_hist_year <= max_year) {
+			if (p.length === 0) {
+				p += 'M';
+			} else {
+				p += ' L';
+			}
+		p += x_hist_scale(d.decs[new_hist_year]['t'][scale_type]) + ' ' + y_hist_scale(d.decs[new_hist_year]['u'][scale_type]);
+		}
+	}
+	return p;
+}
+
 function move_tl_brush(d, new_year) {
+
 	if (new_year === undefined) {
 		var tb_loc = d3.event.selection;
 		tl_brush_ext = tb_loc.map(tl_scale.invert);
 		new_year = (tl_brush_ext[0] + tl_brush_ext[1])/2;
 		new_year = Math.round(new_year/10) * 10;
 	}
+
 	if (new_year >= min_year & new_year <= max_year) {
 		var time_passed = cur_year - new_year;
 		cur_year = new_year.toString();
 			
 		c_svg.selectAll("circle")
 			.transition()
+			// default at 50
 			.duration(100)
 			.attr('cx', function(d) { return x_scale(d.decs[cur_year]['t'][scale_type]) })
 			.attr('cy', function(d) { return y_scale(d.decs[cur_year]['u'][scale_type]) });
@@ -302,24 +314,37 @@ function move_tl_brush(d, new_year) {
 		////////////////////////////////////////
 		c_svg.selectAll(".word-group")
 			.selectAll("path")
+			.remove();
+		
+		// historic path
+		c_svg.selectAll(".word-group")
+			.append("path")
+			.attr("fill", "none")
+			.attr("stroke", past_color)
+			.attr("stroke-opacity", 0)
+			.attr("stroke-dasharray", "10, 5")
 			.attr("d", function(d) {
-				var x_hist_scale = x_scale;
-				var y_hist_scale = y_scale;
-				p = 'M' + x_hist_scale(d.decs[cur_year]['t'][scale_type]) + ' ' + y_hist_scale(d.decs[cur_year]['u'][scale_type]); 
-				for (var i = 1; i <= 10; i ++) {
-					var new_hist_year = mod_year(cur_year, -10 * i)
-					if (new_hist_year >= min_year) {
-						p += ' L' + x_hist_scale(d.decs[new_hist_year]['t'][scale_type]) + ' ' + y_hist_scale(d.decs[new_hist_year]['u'][scale_type]);
-					}
-				}
-				return p;
+				return historic_path(d, 0, 5);
 			})
-			//.attr("stroke-opacity", 0)
-			//.attr("stroke", "url(#linear-gradient)")
 			.transition()
 			.delay(500)
 			.duration(500)
-			//.attr("stroke-opacity", 1)
+			.attr("stroke-opacity", .4);
+
+		// future path
+		c_svg.selectAll(".word-group")
+			.append("path")
+			.attr("fill", "none")
+			.attr("stroke", future_color)
+			.attr("stroke-opacity", 0)
+			.attr("stroke-dasharray", "5, 10")
+			.attr("d", function(d) {
+				return historic_path(d, -5, 0);
+			})
+			.transition()
+			.delay(500)
+			.duration(500)
+			.attr("stroke-opacity", .4);
 		////////////////////////////////////////
 	}
 }
@@ -338,16 +363,11 @@ tl_svg.selectAll('.tl-brush>.handle').remove();
 
 function move_tl_slider(new_year, dur) {
 	if (dur === undefined) {
-		dur = 50 * Math.abs(cur_year - new_year);
+		dur = 100 * Math.abs(cur_year - new_year);
 	}
 	tl_bg.transition()
 		.duration(dur)
 		.call(tl_brush.move, [new_year-5, new_year+5].map(tl_scale));
-}
-
-function whole_tl() {
-	move_tl_slider(2000, 6000);
-	//
 }
 
 var selected_word = '';
@@ -371,14 +391,18 @@ function draw_points() {
 		.attr('cy', function(d) { return y_scale(d.decs[cur_year]['u'][scale_type]) })
 		.on('mouseover click', function(d) {
 			d3.select(this)
-				.attr('class', 'point-mouseon')
+				.attr("class", 'point-mouseon')
 				.attr('r', function(d) { selected_word = d.word; return wordsize_scale(d.word.length) + 2});
 			
 			d3.select("#ul-lexicon")
 				.selectAll("li")
-				.filter(function(w) { console.log(w, selected_word); return w === selected_word; })
-				.attr("font-color", "blue")
-				.attr("font-weight", "bold");
+				.filter(function(w) { return w === selected_word; })
+				.attr("style", "color: " + mouseon_color + "; font-weight: bold");
+
+			d3.select("#ul-brushed")
+				.selectAll("li")
+				.filter(function(w) { return w === selected_word; })
+				.attr("style", "color: " + mouseon_color + "; font-weight: bold");
 
 			ws_svg.selectAll('.word-stats-word')
 				.transition()
@@ -395,11 +419,22 @@ function draw_points() {
 				.attr('r', function(d) { selected_word = d.word; return wordsize_scale(d.word.length)})
 				.attr('class', 'point-mouseoff');
 
-			d3.select("#ul-lexicon")
-				.selectAll("li")
-				.attr("font-color", "black")
-				.attr("font-weight", "normal");
-	
+			if (brushed_words.length > 0) {
+				d3.select("#ul-lexicon")
+					.selectAll("li")
+					.filter(function(w) { return brushed_words.indexOf(w) < 0;} )
+					.attr("style", "color: black; font-weight: normal");
+				
+				d3.select("#ul-lexicon")
+					.selectAll("li")
+					.filter(function(w) { return brushed_words.indexOf(w) >= 0;} )
+					.attr("style", "color: " + brushed_color + "; font-weight: bold");
+			} else {
+				d3.select("#ul-lexicon")
+					.selectAll("li")
+					.attr("style", "color: black; font-weight: normal");				
+			}
+
 			ws_svg.selectAll('.word-stats-word')
 				.transition()
 				.duration(500)
@@ -448,15 +483,15 @@ function scale_by(s_type) {
 		.attr('cx', function(d) { return x_scale(d.decs[cur_year]['t'][scale_type]) })
 		.attr('cy', function(d) { return y_scale(d.decs[cur_year]['u'][scale_type]) });
 
-	c_svg.selectAll('.word-group')
-		.selectAll('path')
-		.attr('d', '');
+	//c_svg.selectAll('.word-group')
+	//	.selectAll('path')
+	//	.attr('d', '');
 
 	if (s_type === 'rank') {
 		c_svg.selectAll('.chart-title')
 			.transition()
 			.duration(500)
-			.text('Ordered by Rank');
+			.text('-log Probability Rank');
 
 		c_svg.selectAll('.x-label')
 			.transition()
