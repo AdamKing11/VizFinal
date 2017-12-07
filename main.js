@@ -75,10 +75,6 @@ var c_svg = c.append('svg')
     .attr("width", width)
     .attr("height", height);
 
-var ws_svg = c.append('svg')
-	.attr("width", words_stats_w)
-	.attr("height", height);
-
 var tl_svg = tl.append('svg')
 	.attr("width", width)
 	.attr("height", tl_height);
@@ -181,7 +177,12 @@ tl_svg.append("g")
 	.call(d3.axisBottom(tl_scale))
 	.attr("transform", "translate(0," + (tl_height/2) + ")");
 
+/*
 // set up the little info tool tip
+var ws_svg = c.append('svg')
+	.attr("width", words_stats_w)
+	.attr("height", height);
+
 ws_svg.append("g")
 	.append("text")
 	.attr('text-anchor', 'middle')
@@ -197,7 +198,7 @@ ws_svg.append("g")
 	.attr('y', 1.25 * y_offset)
 	.attr('class', 'word-stats-rank')
 	.text("--");
-
+*/
 function point_in_brush(px, py, b_c) {
 	if (b_c === null) { return false; }
 	var x_lower = b_c[0][0], x_upper = b_c[1][0];
@@ -324,7 +325,7 @@ function move_tl_brush(d, new_year) {
 			.attr("stroke-opacity", 0)
 			.attr("stroke-dasharray", "10, 5")
 			.attr("d", function(d) {
-				return historic_path(d, 0, 5);
+				return historic_path(d, 0, 7);
 			})
 			.transition()
 			.delay(500)
@@ -339,7 +340,7 @@ function move_tl_brush(d, new_year) {
 			.attr("stroke-opacity", 0)
 			.attr("stroke-dasharray", "5, 10")
 			.attr("d", function(d) {
-				return historic_path(d, -5, 0);
+				return historic_path(d, -7, 0);
 			})
 			.transition()
 			.delay(500)
@@ -403,7 +404,7 @@ function draw_points() {
 				.selectAll("li")
 				.filter(function(w) { return w === selected_word; })
 				.attr("style", "color: " + mouseon_color + "; font-weight: bold");
-
+/*
 			ws_svg.selectAll('.word-stats-word')
 				.transition()
 				.duration(500)
@@ -413,6 +414,7 @@ function draw_points() {
 				.transition()
 				.duration(500)
 				.text(d.decs[cur_year]['t'][scale_type].toFixed(2) + ', ' + d.decs[cur_year]['u'][scale_type].toFixed(2));
+*/
 		})
 		.on('mouseout', function(d) { 
 			d3.select(this)
@@ -434,7 +436,7 @@ function draw_points() {
 					.selectAll("li")
 					.attr("style", "color: black; font-weight: normal");				
 			}
-
+/*
 			ws_svg.selectAll('.word-stats-word')
 				.transition()
 				.duration(500)
@@ -444,13 +446,13 @@ function draw_points() {
 				.transition()
 				.duration(500)
 				.text('--')
+*/
 		})
 		.append("svg:title")
 		.text(function(d) { return d.word; });
 		
 	c_svg.selectAll(".word-group")
 		.append("path")
-		//.attr("stroke", "url(#linear-gradient)")
 		.attr("fill", "none")
 		.attr("stroke-dasharray", "5,5");
 	///////////////////////////////////////////////////////////////
@@ -483,10 +485,6 @@ function scale_by(s_type) {
 		.attr('cx', function(d) { return x_scale(d.decs[cur_year]['t'][scale_type]) })
 		.attr('cy', function(d) { return y_scale(d.decs[cur_year]['u'][scale_type]) });
 
-	//c_svg.selectAll('.word-group')
-	//	.selectAll('path')
-	//	.attr('d', '');
-
 	if (s_type === 'rank') {
 		c_svg.selectAll('.chart-title')
 			.transition()
@@ -506,7 +504,7 @@ function scale_by(s_type) {
 		c_svg.selectAll('.chart-title')
 			.transition()
 			.duration(500)
-			.text('Ordered by -log Probability');
+			.text('-log Probability');
 
 		c_svg.selectAll('.x-label')
 			.transition()
