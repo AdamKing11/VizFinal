@@ -1,3 +1,7 @@
+var brushed_color = "red";
+var mouseon_color = "blue";
+var future_color = "green";
+var past_color = "orange";
 
 // some "helper functions" first....
 // from our large data file, only select the subset that matches the regex filter
@@ -19,6 +23,10 @@ function join_list(l, c) {
 	}
 	return s;
 }
+
+var selected_word = '';
+var brushed_words = [];
+
 // get list of words in our current data
 function calc_lex() {
 	lexicon = [];
@@ -36,7 +44,46 @@ function calc_lex() {
 		.data(lexicon)
 		.enter()
 		.append("li")
-		.text(function(d) { return d; });
+		.text(function(w) { return w; })
+		.on('mouseover click', function(w) {
+			selected_word = w;
+			
+			c_svg.selectAll('.word-group')
+				.selectAll('circle')
+				.filter(function(d) { return d.word === selected_word; })
+				.attr("class", 'point-mouseon')
+				.attr('r', function(d) { selected_word = d.word; return wordsize_scale(d.word.length) + 2});
+
+			d3.select("#ul-lexicon")
+				.selectAll("li")
+				.filter(function(v) { return v === selected_word; })
+				.attr("style", "color: " + mouseon_color + " ; font-weight: bold");
+		})
+		.on('mouseout', function(d) { 
+			c_svg.selectAll('.word-group')
+				.selectAll('circle')
+				.filter(function(e) { return e.word === selected_word; })
+				.attr('r', function(e) { selected_word = e.word; return wordsize_scale(e.word.length)})
+				.attr('class', 'point-mouseoff');
+
+			if (brushed_words.length > 0) {
+				d3.select("#ul-lexicon")
+					.selectAll("li")
+					.filter(function(w) { return brushed_words.indexOf(w) < 0;} )
+					.attr("style", "color: black; font-weight: normal");
+				
+				d3.select("#ul-lexicon")
+					.selectAll("li")
+					.filter(function(w) { return brushed_words.indexOf(w) >= 0;} )
+					.attr("style", "color: " + brushed_color + "; font-weight: bold");
+			} else {
+				d3.select("#ul-lexicon")
+					.selectAll("li")
+					.attr("style", "color: black; font-weight: normal");				
+			}
+			selected_word = '';
+			
+		})		
 }
 
 function mod_year(y, m) { return (parseInt(y) + m).toString();	}
@@ -83,12 +130,6 @@ var words_stats_w = 100;
 
 var x_offset = 100;
 var y_offset = 100;
-
-
-var brushed_color = "red";
-var mouseon_color = "blue";
-var future_color = "green";
-var past_color = "orange";
 
 var tl_brush_ext = [cur_year, parseInt(cur_year) + 10];
 
@@ -194,7 +235,6 @@ tl_svg.append("g")
 	.attr("transform", "translate(0," + (tl_height/2) + ")");
 
 var brush_corners;
-var brushed_words = [];
 
 var point_brush = d3.brush()
 	.on('start', function(d) { 
@@ -214,7 +254,6 @@ var point_brush = d3.brush()
 	})
 	.on('brush end', function(d) {
 		// once we're dragging the brush, highlight the words within
-
 		// gives back the top left corner and bottom right
 		brush_corners = d3.event.selection;
 		
@@ -251,13 +290,8 @@ var point_brush = d3.brush()
 		d3.select("#ul-lexicon")
 			.selectAll("li")
 			.filter(function(w) { return brushed_words.indexOf(w) >= 0; })
-			.attr("style", "color: " + brushed_color + "; font-weight: bold");
-
-		d3.select("#ul-lexicon")
-			.selectAll("li")
-			.filter(function(w) { return brushed_words.indexOf(w) < 0; })
-			.attr("style", "color: black; font-weight: normal");
-	})
+			.attr("style", "color: " + brushed_color + "; font-weight: bold")
+		})
 
 // add the brush
 c_svg.append('g')
@@ -366,7 +400,6 @@ function move_tl_slider(new_year, dur) {
 }
 
 // this functon draws out the points for all words we're currently interested in
-var selected_word = '';
 function draw_points() {
 	///////////////////////////////////////////////////////////////
 	c_svg.selectAll('.word-group')
@@ -450,7 +483,6 @@ function scale_by(s_type) {
 		.duration(500)
 		.call(d3.axisLeft(y_scale))
 		.attr("transform", "translate(" + x_offset + ",0)")
-
 
 	c_svg.selectAll("circle")
 		.transition()
